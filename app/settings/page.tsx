@@ -19,16 +19,28 @@ interface PingResults {
   groq?: { ok: boolean; detail?: string };
 }
 
+const DEFAULT_FORM: AppSettings = {
+  defaultJudgeModelId: 'llama-3.3-70b-versatile',
+  githubPagesBranch: 'gh-pages',
+};
+
 export default function SettingsPage() {
   const { settings, update } = useSettings();
-  const [form, setForm] = useState<AppSettings | null>(null);
+  const [form, setForm] = useState<AppSettings>(DEFAULT_FORM);
+  const [hydrated, setHydrated] = useState(false);
   const [testing, setTesting] = useState(false);
   const [results, setResults] = useState<PingResults | null>(null);
   const [envStatus, setEnvStatus] = useState<{ groq: boolean; github: boolean } | null>(null);
 
   useEffect(() => {
-    if (settings && !form) setForm(settings);
-  }, [settings, form]);
+    if (settings) {
+      setForm({
+        defaultJudgeModelId: settings.defaultJudgeModelId,
+        githubPagesBranch: settings.githubPagesBranch,
+      });
+    }
+    setHydrated(true);
+  }, [settings]);
 
   useEffect(() => {
     fetch('/api/test', { method: 'POST' })
@@ -42,7 +54,7 @@ export default function SettingsPage() {
       .catch(() => setEnvStatus({ groq: false, github: false }));
   }, []);
 
-  if (!form) {
+  if (!hydrated) {
     return (
       <div className="flex h-40 items-center justify-center text-muted">
         <Loader2 className="h-4 w-4 animate-spin" />

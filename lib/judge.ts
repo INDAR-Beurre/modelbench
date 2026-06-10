@@ -16,7 +16,8 @@
 import type { ChatMessage, CompletionResult } from './llm';
 import { chatCompletion } from './llm';
 import type { JudgeResult, JudgeScores, ModelSpec, Project } from './types';
-import { clamp, findModel, safeJson, truncate } from './utils';
+import { clamp, safeJson, truncate } from './utils';
+import { findModel } from './types';
 
 export const JUDGE_SYSTEM_PROMPT = `You are a Senior Frontend QA Engineer with 15+ years of experience evaluating production web interfaces. You are precise, fair, and NEVER inflate scores.
 
