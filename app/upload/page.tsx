@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { FileUpload } from '@/components/FileUpload';
 import { ModelSelect } from '@/components/ModelSelect';
 import { useProjects, useSettings } from '@/hooks/useProjects';
-import type { ProjectFile } from '@/lib/types';
+import type { ProjectFile, ModelSpec } from '@/lib/types';
 import { DEFAULT_MODEL_ID, MODEL_CATALOG, findModel } from '@/lib/types';
 
 export default function UploadPage() {
