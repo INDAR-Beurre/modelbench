@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScoreBar } from '@/components/ScoreBar';
+import { Preview } from '@/components/Preview';
 import type { Project } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 import { runDeploy, runJudge } from '@/hooks/useProjects';
@@ -99,6 +100,9 @@ export function ProjectCard({
           </div>
         </div>
 
+        {/* Live preview — top of the card, sandboxed iframe. */}
+        <Preview files={project.files} deployUrl={project.deployUrl} compact />
+
         <p className="line-clamp-3 text-sm leading-relaxed text-muted">
           {project.prompt}
         </p>
@@ -119,6 +123,11 @@ export function ProjectCard({
                 </div>
               </div>
             </div>
+            {project.judge.verdict && (
+              <p className="mb-3 border-b border-paper/15 pb-3 text-sm font-medium text-paper/95">
+                {project.judge.verdict}
+              </p>
+            )}
             <div className="grid gap-3 sm:grid-cols-3">
               <ScoreBar label="Design" value={project.judge.scores.design} tone="lime" className="[&_div]:!bg-paper" />
               <ScoreBar label="Code" value={project.judge.scores.codeQuality} tone="lime" className="[&_div]:!bg-paper" />

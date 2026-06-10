@@ -5,6 +5,7 @@ import { Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScoreBar } from '@/components/ScoreBar';
+import { ModelChart, type ChartRow } from '@/components/ModelChart';
 import type { Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -48,9 +49,21 @@ function aggregate(projects: Project[]): ModelAgg[] {
   return rows.sort((a, b) => b.average - a.average);
 }
 
+function toChartRow(rows: ModelAgg[]): ChartRow[] {
+  return rows.map((r) => ({
+    modelId: r.modelId,
+    label: r.label,
+    design: r.design,
+    codeQuality: r.codeQuality,
+    featureCompleteness: r.featureCompleteness,
+    average: r.average,
+  }));
+}
+
 export function Leaderboard({ projects }: { projects: Project[] }) {
   const rows = useMemo(() => aggregate(projects), [projects]);
   const groups = useMemo(() => groupByCategory(projects), [projects]);
+  const chartRows = useMemo(() => toChartRow(rows), [rows]);
 
   if (rows.length === 0) {
     return (
@@ -71,6 +84,8 @@ export function Leaderboard({ projects }: { projects: Project[] }) {
 
   return (
     <div className="space-y-12">
+      <ModelChart rows={chartRows} />
+
       <div className="grid auto-rows-fr grid-cols-1 gap-4 md:grid-cols-2">
         {rows.map((r, i) => {
           const tones: ('red' | 'blue' | 'violet' | 'lime')[] = ['red', 'blue', 'violet', 'lime'];

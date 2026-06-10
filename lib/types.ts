@@ -29,6 +29,7 @@ export interface JudgeResult {
   total: number; // sum of the three scores, 0-30
   average: number; // average, 0-10
   critique: string;
+  verdict?: string; // one-line summary
   highlights: string[];
   modelId: string; // model that produced the evaluation
   raw?: string; // raw LLM response (for debugging)
@@ -67,6 +68,12 @@ export interface AppSettings {
 /** Catalog of models that ship with ModelBench. */
 export const MODEL_CATALOG: ModelSpec[] = [
   {
+    id: 'qwen-2.5-coder-32b-instruct',
+    label: 'Qwen 2.5 Coder 32B (Groq) — best for code review',
+    provider: 'groq',
+    baseUrl: 'https://api.groq.com/openai/v1',
+  },
+  {
     id: 'llama-3.3-70b-versatile',
     label: 'Llama 3.3 70B (Groq)',
     provider: 'groq',
@@ -96,5 +103,6 @@ export function findModel(id: string): ModelSpec | undefined {
   return MODEL_CATALOG.find((m) => m.id === id);
 }
 
-/** Default model to use when nothing is configured. */
-export const DEFAULT_MODEL_ID = 'llama-3.3-70b-versatile';
+/** Default model to use when nothing is configured. Qwen Coder 32B is the
+ *  best code-review model on Groq — it gives honest, specific feedback. */
+export const DEFAULT_MODEL_ID = 'qwen-2.5-coder-32b-instruct';
