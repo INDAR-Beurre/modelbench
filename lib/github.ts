@@ -207,8 +207,7 @@ function toBase64(s: string): string {
     return Buffer.from(s, 'utf-8').toString('base64');
   }
   // Browser fallback (shouldn't be used here, but safe)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const btoaFn: (s: string) => string = (globalThis as any).btoa;
+  const btoaFn: (s: string) => string = (globalThis as { btoa?: (s: string) => string }).btoa ?? ((s: string) => s);
   return btoaFn(unescape(encodeURIComponent(s)));
 }
 
