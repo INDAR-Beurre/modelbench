@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Sparkles, Wand2, FlaskConical } from 'lucide-react';
+import { Loader2, Sparkles, Wand2, FlaskConical, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,9 +51,6 @@ const SAMPLE_PROJECT: ProjectFile[] = [
   --ink: #120f0a;
   --paper: #fff7e6;
   --muted: #5e5548;
-  --red: #ff4d2e;
-  --blue: #1d4dff;
-  --lime: #d8ff38;
   --radius: 16px;
   font-family: system-ui, -apple-system, sans-serif;
 }
@@ -87,6 +84,11 @@ export default function UploadPage() {
   const [generating, setGenerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Quick-paste state
+  const [pasteName, setPasteName] = useState('index.html');
+  const [pasteLang, setPasteLang] = useState<'html' | 'css' | 'js' | 'ts' | 'json' | 'md'>('html');
+  const [pasteContent, setPasteContent] = useState('');
+
   const isCustom = modelId === 'custom';
   const model: ModelSpec = isCustom
     ? {
@@ -102,6 +104,35 @@ export default function UploadPage() {
     setCategory('landing-page');
     setFiles(SAMPLE_PROJECT);
     toast.success('Sample project loaded — click Save & judge');
+  }
+
+  function handleAddPaste() {
+    const trimmed = pasteContent.trim();
+    if (!trimmed) {
+      toast.error('Paste or type some code first');
+      return;
+    }
+    const filename = (pasteName.trim() || 'index.html').replace(/^\/+/, '');
+    const newFile: ProjectFile = {
+      path: filename,
+      content: pasteContent,
+      language: pasteLang,
+    };
+    const idx = files.findIndex((f) => f.path === filename);
+    if (idx >= 0) {
+      const next = [...files];
+      next[idx] = newFile;
+      setFiles(next);
+      toast.success(`Replaced ${filename}`);
+    } else {
+      setFiles([...files, newFile]);
+      toast.success(`Added ${filename}`);
+    }
+    setPasteContent('');
+  }
+
+  function handleRemoveFile(path: string) {
+    setFiles(files.filter((f) => f.path !== path));
   }
 
   async function handleGenerate() {
@@ -142,7 +173,7 @@ export default function UploadPage() {
       return;
     }
     if (files.length === 0) {
-      toast.error('Add at least one source file (or click Try sample)');
+      toast.error('Add at least one source file (paste, upload, or click Try sample)');
       return;
     }
 
@@ -189,8 +220,8 @@ export default function UploadPage() {
           <span className="eyebrow text-muted">— 02 / The Desk</span>
           <h1 className="display-2 mt-3 font-serif text-ink">Submit a project.</h1>
           <p className="mt-3 max-w-2xl text-muted">
-            Drop files, or have a model generate them, then add the project to your bench.
-            The judge will score it on three axes and slot it into the leaderboard.
+            Paste an HTML page, drop a folder, or have a model generate one — then add it to
+            your bench and the judge will score it.
           </p>
         </div>
         <div className="flex flex-col items-end justify-end gap-2 md:col-span-4">
@@ -207,47 +238,108 @@ export default function UploadPage() {
             <span className="eyebrow text-muted">— A. Source files</span>
             <CardTitle className="mt-2 font-serif text-3xl">The code</CardTitle>
             <CardDescription>
-              Drop a folder, pick files, click <span className="text-ink">Generate with AI</span>,
-              or hit <span className="text-ink">Try sample</span> above to skip the setup.
+              Paste an HTML page right here, drop a folder of files, or hit{' '}
+              <span className="text-ink">Generate with AI</span>.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5 p-7 pt-0">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Model that generated the code</Label>
-                <div className="mt-1.5">
-                  <ModelSelect value={modelId} onValueChange={setModelId} />
-                </div>
-                {isCustom && (
-                  <Input
-                    className="mt-2"
-                    placeholder="e.g. Llama 3.3 70B (Groq)"
-                    value={customModelName}
-                    onChange={(e) => setCustomModelName(e.target.value)}
-                  />
-                )}
+          <CardContent className="space-y-6 p-7 pt-0">
+            {/* Quick-paste box */}
+            <div className="rounded-2xl border border-ink/15 bg-cream/40 p-4">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <Label className="!text-ink">Quick paste</Label>
+                <span className="eyebrow text-muted">— Type or paste</span>
               </div>
-              <div>
-                <Label>Prompt category (optional)</Label>
+              <div className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1.2fr_0.8fr_auto]">
                 <Input
-                  className="mt-1.5"
-                  placeholder="e.g. landing-page"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  placeholder="index.html"
+                  value={pasteName}
+                  onChange={(e) => setPasteName(e.target.value)}
+                  className="font-mono text-xs"
                 />
+                <select
+                  value={pasteLang}
+                  onChange={(e) => setPasteLang(e.target.value as typeof pasteLang)}
+                  className="h-12 rounded-pill border border-ink/30 bg-paper/70 px-4 text-sm text-ink focus:outline-none focus:border-ink"
+                >
+                  <option value="html">HTML</option>
+                  <option value="css">CSS</option>
+                  <option value="js">JavaScript</option>
+                  <option value="ts">TypeScript</option>
+                  <option value="json">JSON</option>
+                  <option value="md">Markdown</option>
+                </select>
+                <Button
+                  type="button"
+                  variant="lime"
+                  onClick={handleAddPaste}
+                  disabled={!pasteContent.trim()}
+                >
+                  <Plus className="h-4 w-4" /> Add
+                </Button>
               </div>
-            </div>
-            <div>
-              <Label>Original prompt</Label>
               <Textarea
-                className="mt-1.5"
-                placeholder="Build a calm productivity timer with a dark theme, ambient sounds, and stats."
-                rows={4}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
+                className="mt-2 font-mono text-xs"
+                placeholder={pasteLang === 'html' ? '<!doctype html>\n<html>\n  <body>\n    <h1>Hello</h1>\n  </body>\n</html>' : '/* paste your code here */'}
+                rows={8}
+                value={pasteContent}
+                onChange={(e) => setPasteContent(e.target.value)}
               />
             </div>
+
+            <div className="flex items-center gap-3 text-[10px] uppercase tracking-eyebrow text-muted">
+              <div className="h-px flex-1 bg-ink/15" />
+              <span>or drop / upload a folder</span>
+              <div className="h-px flex-1 bg-ink/15" />
+            </div>
+
             <FileUpload files={files} onChange={setFiles} />
+
+            {files.length > 0 && (
+              <div className="overflow-hidden rounded-2xl border border-ink/20 bg-paper/80">
+                <div className="flex items-center justify-between border-b border-ink/10 px-4 py-2.5">
+                  <span className="eyebrow text-muted">
+                    {files.length} file{files.length === 1 ? '' : 's'} in project
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setFiles([])}
+                  >
+                    Clear all
+                  </Button>
+                </div>
+                <ul className="max-h-48 divide-y divide-ink/10 overflow-y-auto code-scroll">
+                  {files.map((f) => (
+                    <li
+                      key={f.path}
+                      className="flex items-center justify-between gap-2 px-4 py-2 text-sm"
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="truncate font-mono text-xs text-ink">{f.path}</span>
+                        <span className="shrink-0 text-[10px] uppercase tracking-eyebrow text-muted">
+                          {f.language ?? 'text'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted">
+                          {f.content.length.toLocaleString()} chars
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFile(f.path)}
+                          className="rounded-full p-1 text-muted hover:bg-ink/10 hover:text-ink"
+                          aria-label={`Remove ${f.path}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-4">
               <Button
                 type="button"
@@ -255,7 +347,7 @@ export default function UploadPage() {
                 size="lg"
                 onClick={handleGenerate}
                 disabled={generating || !prompt.trim() || isCustom}
-                title={isCustom ? 'In-app generation is only available for catalog models. Upload files manually for custom entries.' : undefined}
+                title={isCustom ? 'In-app generation is only available for catalog models. Paste or upload files manually for custom entries.' : undefined}
               >
                 {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
                 Generate with {model.label.split(' ')[0]}
@@ -277,12 +369,45 @@ export default function UploadPage() {
           </CardHeader>
           <CardContent className="space-y-4 p-7 pt-0">
             <div>
+              <Label>Model that generated the code</Label>
+              <div className="mt-1.5">
+                <ModelSelect value={modelId} onValueChange={setModelId} />
+              </div>
+              {isCustom && (
+                <Input
+                  className="mt-2"
+                  placeholder="e.g. Llama 3.3 70B (Groq)"
+                  value={customModelName}
+                  onChange={(e) => setCustomModelName(e.target.value)}
+                />
+              )}
+            </div>
+            <div>
               <Label>Name</Label>
               <Input
                 className="mt-1.5"
                 placeholder="calm-productivity-timer"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Prompt category (optional)</Label>
+              <Input
+                className="mt-1.5"
+                placeholder="e.g. landing-page"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Original prompt</Label>
+              <Textarea
+                className="mt-1.5"
+                placeholder="Build a calm productivity timer with a dark theme, ambient sounds, and stats."
+                rows={3}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
               />
             </div>
             <div className="rounded-2xl border border-ink/15 bg-cream/60 p-4 text-xs leading-relaxed text-ink/80">
