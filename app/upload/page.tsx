@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Sparkles, Wand2, FlaskConical, Plus, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Loader2, Sparkles, Wand2, FlaskConical, Plus, X, Github, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,9 +12,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { FileUpload } from '@/components/FileUpload';
 import { ModelSelect } from '@/components/ModelSelect';
-import { useProjects, useSettings } from '@/hooks/useProjects';
+import { runDeploy, useProjects, useSettings } from '@/hooks/useProjects';
 import type { ModelSpec, ProjectFile } from '@/lib/types';
 import { DEFAULT_MODEL_ID, MODEL_CATALOG, findModel } from '@/lib/types';
+
+const AUTO_PUSH_KEY = 'modelbench:autoPush';
 
 const SAMPLE_PROJECT: ProjectFile[] = [
   {
@@ -83,6 +86,20 @@ export default function UploadPage() {
   const [customModelName, setCustomModelName] = useState('');
   const [generating, setGenerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Auto-push to GitHub on every successful judge (default ON).
+  const [autoPush, setAutoPush] = useState(true);
+  useEffect(() => {
+    try {
+      const v = window.localStorage.getItem(AUTO_PUSH_KEY);
+      if (v !== null) setAutoPush(v === '1');
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(AUTO_PUSH_KEY, autoPush ? '1' : '0');
+    } catch { /* ignore */ }
+  }, [autoPush]);
 
   // Quick-paste state
   const [pasteName, setPasteName] = useState('index.html');
@@ -187,6 +204,8 @@ export default function UploadPage() {
       judgeModelId: settings?.defaultJudgeModelId ?? DEFAULT_MODEL_ID,
     });
 
+    let judgedOk = false;
+    let judgeData: { average: number } | null = null;
     try {
       const judgeRes = await fetch('/api/judge', {
         method: 'POST',
@@ -202,15 +221,49 @@ export default function UploadPage() {
         toast.error(data.error ?? 'Judge failed');
       } else {
         updateProject(project.id, { status: 'judged', judge: data });
+        judgeData = data;
+        judgedOk = true;
         toast.success(`Scored ${data.average}/10 — view it on the dashboard`);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Network error';
       updateProject(project.id, { status: 'error', error: message });
       toast.error(message);
-    } finally {
-      setSubmitting(false);
     }
+
+    // Auto-push to GitHub after a successful judge. This always runs, even
+    // if the judge above errored, so the user can recover a failed push
+    // by re-clicking "Push to GitHub" on the project card.
+    if (judgedOk && autoPush) {
+      const pushing = toast.loading(`Pushing to GitHub…`);
+      try {
+        const updated = await runDeploy({
+          ...project,
+          status: 'judged',
+          judge: judgeData ?? undefined,
+        });
+        if (updated.error) {
+          updateProject(project.id, { error: updated.error });
+          toast.error(`GitHub push failed: ${updated.error}`, { id: pushing });
+        } else {
+          updateProject(project.id, {
+            repoUrl: updated.repoUrl,
+            deployUrl: updated.deployUrl,
+            error: undefined,
+          });
+          toast.success(
+            `Pushed to GitHub${updated.deployUrl ? ' · live site ready' : ''}`,
+            { id: pushing },
+          );
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'GitHub push failed';
+        updateProject(project.id, { error: message });
+        toast.error(message, { id: pushing });
+      }
+    }
+
+    setSubmitting(false);
   }
 
   return (
@@ -415,9 +468,50 @@ export default function UploadPage() {
               <ul className="mt-2 list-decimal space-y-1 pl-4">
                 <li>The project is saved to your local bench.</li>
                 <li>The judge scores it on three axes (1-10 each).</li>
-                <li>Push to GitHub or re-judge from the dashboard.</li>
+                <li>
+                  {autoPush
+                    ? 'It’s automatically pushed to a public GitHub repo (GitHub Pages).'
+                    : 'You can push it to GitHub from the dashboard.'}
+                </li>
               </ul>
             </div>
+
+            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-ink/15 bg-paper/60 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <span className="grid h-9 w-9 place-items-center rounded-full border border-ink bg-paper text-ink">
+                  <Github className="h-4 w-4" />
+                </span>
+                <div>
+                  <div className="text-sm font-semibold text-ink">Auto-push to GitHub</div>
+                  <div className="text-xs text-muted">
+                    Creates a public <span className="font-mono">{`modelbench-<name>`}</span> repo and enables GitHub Pages.
+                  </div>
+                </div>
+              </div>
+              <span
+                role="switch"
+                aria-checked={autoPush}
+                onClick={() => setAutoPush((v) => !v)}
+                onKeyDown={(e) => {
+                  if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    setAutoPush((v) => !v);
+                  }
+                }}
+                tabIndex={0}
+                className={
+                  'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border transition ' +
+                  (autoPush ? 'border-ink bg-ink' : 'border-ink/30 bg-paper')
+                }
+              >
+                <span
+                  className={
+                    'inline-block h-4 w-4 transform rounded-full bg-paper shadow transition ' +
+                    (autoPush ? 'translate-x-6 bg-brand-lime' : 'translate-x-1 bg-ink/40')
+                  }
+                />
+              </span>
+            </label>
             <Button
               variant="pill"
               size="xl"
@@ -425,8 +519,8 @@ export default function UploadPage() {
               onClick={handleSubmit}
               disabled={submitting}
             >
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              Save &amp; judge
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : autoPush ? <Github className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+              {submitting ? 'Working…' : autoPush ? 'Save, judge & push' : 'Save & judge'}
             </Button>
           </CardContent>
         </Card>
