@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Sparkles, Wand2 } from 'lucide-react';
+import { Loader2, Sparkles, Wand2, FlaskConical } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,65 @@ import { ModelSelect } from '@/components/ModelSelect';
 import { useProjects, useSettings } from '@/hooks/useProjects';
 import type { ModelSpec, ProjectFile } from '@/lib/types';
 import { DEFAULT_MODEL_ID, MODEL_CATALOG, findModel } from '@/lib/types';
+
+const SAMPLE_PROJECT: ProjectFile[] = [
+  {
+    path: 'index.html',
+    language: 'html',
+    content: `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sample Landing</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <header>
+        <span class="eyebrow">— Sample Project</span>
+        <h1>A calm landing page.</h1>
+        <p>Hero, features grid, and a clear CTA — built with vanilla HTML &amp; CSS.</p>
+        <a class="cta" href="#start">Get started</a>
+      </header>
+      <section class="features">
+        <article><h3>Fast</h3><p>Zero dependencies, instant load.</p></article>
+        <article><h3>Honest</h3><p>No tracking, no cookies, no fluff.</p></article>
+        <article><h3>Quiet</h3><p>Designed to disappear into the background.</p></article>
+      </section>
+    </main>
+  </body>
+</html>`,
+  },
+  {
+    path: 'styles.css',
+    language: 'css',
+    content: `:root {
+  --ink: #120f0a;
+  --paper: #fff7e6;
+  --muted: #5e5548;
+  --red: #ff4d2e;
+  --blue: #1d4dff;
+  --lime: #d8ff38;
+  --radius: 16px;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); }
+.wrap { max-width: 960px; margin: 0 auto; padding: 4rem 1.5rem; }
+.eyebrow { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); }
+h1 { font-size: clamp(2.25rem, 5vw, 4rem); line-height: 1; margin: 0.5rem 0 1rem; }
+p { color: var(--muted); line-height: 1.6; max-width: 52ch; }
+.cta { display: inline-block; margin-top: 1.5rem; padding: 0.85rem 1.5rem; background: var(--ink); color: var(--paper); border-radius: 999px; text-decoration: none; font-weight: 600; }
+.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 3rem; }
+.features article { padding: 1.5rem; border: 1px solid rgba(18,15,10,0.15); border-radius: var(--radius); background: white; }
+.features h3 { margin: 0 0 0.5rem; }
+`,
+  },
+];
+
+const SAMPLE_PROMPT =
+  'Build a calm, minimal landing page for a meditation app with a serif hero, three feature cards, and a single primary CTA.';
 
 export default function UploadPage() {
   const { addProject, updateProject } = useProjects();
@@ -36,6 +95,14 @@ export default function UploadPage() {
         provider: 'groq',
       }
     : (findModel(modelId) ?? MODEL_CATALOG[0]);
+
+  function loadSample() {
+    setName('calm-meditation-landing');
+    setPrompt(SAMPLE_PROMPT);
+    setCategory('landing-page');
+    setFiles(SAMPLE_PROJECT);
+    toast.success('Sample project loaded — click Save & judge');
+  }
 
   async function handleGenerate() {
     if (!prompt.trim()) {
@@ -66,10 +133,19 @@ export default function UploadPage() {
   }
 
   async function handleSubmit() {
-    if (!name.trim() || !prompt.trim() || files.length === 0) {
-      toast.error('Project name, prompt, and at least one file are required');
+    if (!name.trim()) {
+      toast.error('Project name is required');
       return;
     }
+    if (!prompt.trim()) {
+      toast.error('Original prompt is required');
+      return;
+    }
+    if (files.length === 0) {
+      toast.error('Add at least one source file (or click Try sample)');
+      return;
+    }
+
     setSubmitting(true);
     const project = addProject({
       name: name.trim(),
@@ -95,10 +171,12 @@ export default function UploadPage() {
         toast.error(data.error ?? 'Judge failed');
       } else {
         updateProject(project.id, { status: 'judged', judge: data });
-        toast.success(`Scored ${data.average}/10`);
+        toast.success(`Scored ${data.average}/10 — view it on the dashboard`);
       }
     } catch (err) {
-      updateProject(project.id, { status: 'error', error: (err as Error).message });
+      const message = err instanceof Error ? err.message : 'Network error';
+      updateProject(project.id, { status: 'error', error: message });
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -115,7 +193,10 @@ export default function UploadPage() {
             The judge will score it on three axes and slot it into the leaderboard.
           </p>
         </div>
-        <div className="flex items-end justify-end md:col-span-4">
+        <div className="flex flex-col items-end justify-end gap-2 md:col-span-4">
+          <Button variant="lime" size="sm" onClick={loadSample}>
+            <FlaskConical className="h-3.5 w-3.5" /> Try sample
+          </Button>
           <Badge variant="red" className="text-xs">Beta</Badge>
         </div>
       </header>
@@ -126,7 +207,8 @@ export default function UploadPage() {
             <span className="eyebrow text-muted">— A. Source files</span>
             <CardTitle className="mt-2 font-serif text-3xl">The code</CardTitle>
             <CardDescription>
-              Drop a folder, pick files, or click <span className="text-ink">Generate with AI</span>.
+              Drop a folder, pick files, click <span className="text-ink">Generate with AI</span>,
+              or hit <span className="text-ink">Try sample</span> above to skip the setup.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5 p-7 pt-0">

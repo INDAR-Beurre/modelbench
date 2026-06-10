@@ -3,6 +3,9 @@
 // Projects store + thin wrappers around the /api/judge and /api/deploy
 // routes. API keys live exclusively on the server, so we never accept or
 // forward per-request credentials from the client.
+//
+// All mutations use the functional form of setState so they always see the
+// latest list, even when called immediately after another mutation.
 // =========================================================================
 
 import { useCallback, useEffect, useState } from 'react';
@@ -19,11 +22,6 @@ export function useProjects() {
     setHydrated(true);
   }, []);
 
-  const persist = useCallback((next: Project[]) => {
-    setProjects(next);
-    projectsStore.save(next);
-  }, []);
-
   const addProject = useCallback(
     (data: Omit<Project, 'id' | 'createdAt' | 'status'>): Project => {
       const project: Project = {
@@ -32,26 +30,35 @@ export function useProjects() {
         createdAt: Date.now(),
         status: 'pending',
       };
-      persist([project, ...projects]);
+      // Functional update — never read stale `projects` from a closure.
+      setProjects((prev) => {
+        const next = [project, ...prev];
+        projectsStore.save(next);
+        return next;
+      });
       return project;
     },
-    [projects, persist],
+    [],
   );
 
   const updateProject = useCallback(
     (id: string, patch: Partial<Project>) => {
-      const next = projects.map((p) => (p.id === id ? { ...p, ...patch } : p));
-      persist(next);
+      setProjects((prev) => {
+        const next = prev.map((p) => (p.id === id ? { ...p, ...patch } : p));
+        projectsStore.save(next);
+        return next;
+      });
     },
-    [projects, persist],
+    [],
   );
 
-  const removeProject = useCallback(
-    (id: string) => {
-      persist(projects.filter((p) => p.id !== id));
-    },
-    [projects, persist],
-  );
+  const removeProject = useCallback((id: string) => {
+    setProjects((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      projectsStore.save(next);
+      return next;
+    });
+  }, []);
 
   return { projects, hydrated, addProject, updateProject, removeProject };
 }
