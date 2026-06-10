@@ -1,0 +1,14 @@
+# Netlify configuration for ModelBench
+# Uses the official Next.js runtime plugin so the API routes
+# (judge, deploy, generate, test) become real serverless functions.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Cache the build output and node_modules across deploys to speed up builds.
+[build.cache]
+  paths = ["node_modules", ".next/cache"]
