@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { ExternalLink, Github, Loader2, Sparkles, Trash2, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScoreBar } from '@/components/ScoreBar';
 import type { Project } from '@/lib/types';
@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 
 export function ProjectCard({
   project,
+  index = 0,
   onUpdate,
   onDelete,
   defaultJudgeModelId,
@@ -22,6 +23,7 @@ export function ProjectCard({
   githubToken,
 }: {
   project: Project;
+  index?: number;
   onUpdate: (p: Project) => void;
   onDelete: () => void;
   defaultJudgeModelId: string;
@@ -30,6 +32,10 @@ export function ProjectCard({
   githubToken: string;
 }) {
   const [busy, setBusy] = useState<'judge' | 'deploy' | null>(null);
+
+  // Pick a deterministic accent color per card.
+  const accents = ['red', 'blue', 'violet', 'lime', 'ink'] as const;
+  const accent = accents[index % accents.length];
 
   async function handleJudge() {
     setBusy('judge');
@@ -63,66 +69,80 @@ export function ProjectCard({
   }
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-        <div className="min-w-0">
-          <div className="mb-1 flex flex-wrap items-center gap-2">
-            <Badge variant="violet">{project.model.label}</Badge>
-            {project.promptCategory && (
-              <Badge variant="outline">{project.promptCategory}</Badge>
-            )}
-            <Badge variant={project.status === 'judged' ? 'success' : project.status === 'error' ? 'destructive' : 'secondary'}>
-              {project.status}
-            </Badge>
+    <Card accent={accent} className="enter">
+      <CardContent className="space-y-5 p-7">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="mb-3 flex flex-wrap items-center gap-1.5">
+              <Badge variant={accent === 'ink' ? 'default' : (accent as 'red' | 'blue' | 'violet' | 'lime')}>
+                {project.model.label}
+              </Badge>
+              {project.promptCategory && (
+                <Badge variant="cream">{project.promptCategory}</Badge>
+              )}
+              <Badge
+                variant={
+                  project.status === 'judged' ? 'lime' :
+                  project.status === 'error' ? 'red' :
+                  project.status === 'judging' ? 'violet' :
+                  'outline'
+                }
+              >
+                {project.status}
+              </Badge>
+            </div>
+            <h3 className="font-serif text-2xl leading-tight tracking-tightest text-ink">
+              {project.name}
+            </h3>
+            <p className="mt-1 text-[11px] uppercase tracking-eyebrow text-muted">
+              {formatDate(project.createdAt)} · {project.files.length} files
+            </p>
           </div>
-          <CardTitle className="truncate">{project.name}</CardTitle>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {formatDate(project.createdAt)} · {project.files.length} files
-          </p>
+          <div className="flex items-start gap-1">
+            <span className="numeral text-3xl font-serif text-ink/15">
+              {String(index + 1).padStart(2, '0')}
+            </span>
+            <Button size="sm" variant="ghost" onClick={onDelete} aria-label="Delete" className="h-8 w-8 rounded-full p-0">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onDelete}
-            aria-label="Delete"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="line-clamp-3 text-sm text-muted-foreground">
+
+        <p className="line-clamp-3 text-sm leading-relaxed text-muted">
           {project.prompt}
         </p>
 
         {project.judge ? (
-          <div className="rounded-lg border border-border/60 bg-background/40 p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Sparkles className="h-4 w-4 text-violet-400" />
-                Judge Verdict
+          <div className="rounded-2xl border border-ink bg-ink p-5 text-paper shadow-bezel">
+            <div className="mb-4 flex items-end justify-between">
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-eyebrow text-paper/70">
+                <Sparkles className="h-3 w-3" />
+                <span>Verdict</span>
               </div>
-              <div className="font-mono text-2xl font-bold gradient-text">
-                {project.judge.average.toFixed(1)}
-                <span className="text-sm text-muted-foreground">/10</span>
+              <div className="text-right">
+                <div className="numeral font-serif text-5xl leading-none">
+                  {project.judge.average.toFixed(1)}
+                </div>
+                <div className="mt-1 text-[10px] uppercase tracking-eyebrow text-paper/50">
+                  average / 10
+                </div>
               </div>
             </div>
-            <div className="grid gap-2 sm:grid-cols-3">
-              <ScoreBar label="Design" value={project.judge.scores.design} />
-              <ScoreBar label="Code" value={project.judge.scores.codeQuality} />
-              <ScoreBar label="Features" value={project.judge.scores.featureCompleteness} />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <ScoreBar label="Design" value={project.judge.scores.design} tone="lime" className="[&_div]:!bg-paper" />
+              <ScoreBar label="Code" value={project.judge.scores.codeQuality} tone="lime" className="[&_div]:!bg-paper" />
+              <ScoreBar label="Features" value={project.judge.scores.featureCompleteness} tone="lime" className="[&_div]:!bg-paper" />
             </div>
             {project.judge.critique && (
-              <p className="mt-3 text-sm text-muted-foreground">
+              <p className="mt-4 border-t border-paper/15 pt-3 text-sm leading-relaxed text-paper/80">
                 {project.judge.critique}
               </p>
             )}
             {project.judge.highlights.length > 0 && (
-              <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+              <ul className="mt-3 space-y-1.5 text-xs text-paper/70">
                 {project.judge.highlights.map((h, i) => (
                   <li key={i} className="flex gap-2">
-                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" />
+                    <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-brand-lime" />
                     <span>{h}</span>
                   </li>
                 ))}
@@ -132,31 +152,31 @@ export function ProjectCard({
         ) : null}
 
         {project.error && (
-          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+          <div className="rounded-pill border border-brand-red bg-brand-red/10 px-4 py-2 text-xs text-brand-red">
             {project.error}
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" onClick={handleJudge} disabled={busy !== null}>
-            {busy === 'judge' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {project.judge ? 'Re-judge' : 'Judge with AI'}
+        <div className="flex flex-wrap items-center gap-2 border-t border-ink/10 pt-4">
+          <Button variant="pill" size="sm" onClick={handleJudge} disabled={busy !== null}>
+            {busy === 'judge' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            {project.judge ? 'Re-judge' : 'Judge'}
           </Button>
-          <Button size="sm" variant="outline" onClick={handleDeploy} disabled={busy !== null}>
-            {busy === 'deploy' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Github className="h-4 w-4" />}
+          <Button variant="outline" size="sm" onClick={handleDeploy} disabled={busy !== null}>
+            {busy === 'deploy' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Github className="h-3.5 w-3.5" />}
             Push to GitHub
           </Button>
           {project.repoUrl && (
             <Link href={project.repoUrl} target="_blank">
-              <Button size="sm" variant="ghost">
-                <ExternalLink className="h-4 w-4" /> Repo
+              <Button size="sm" variant="ghost" className="sweep">
+                <ExternalLink className="h-3.5 w-3.5" /> Repo
               </Button>
             </Link>
           )}
           {project.deployUrl && (
             <Link href={project.deployUrl} target="_blank">
-              <Button size="sm" variant="ghost">
-                <Zap className="h-4 w-4" /> Live
+              <Button size="sm" variant="ghost" className="sweep">
+                <Zap className="h-3.5 w-3.5" /> Live
               </Button>
             </Link>
           )}

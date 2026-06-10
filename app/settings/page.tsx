@@ -32,7 +32,7 @@ export default function SettingsPage() {
 
   if (!form) {
     return (
-      <div className="flex h-40 items-center justify-center text-muted-foreground">
+      <div className="flex h-40 items-center justify-center text-muted">
         <Loader2 className="h-4 w-4 animate-spin" />
       </div>
     );
@@ -70,30 +70,35 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="mt-1 text-muted-foreground">
-          All keys are stored in your browser's localStorage. Server routes also
-          read <code className="text-foreground">process.env</code> as a fallback.
-        </p>
-      </div>
+    <div className="space-y-12">
+      <header className="grid gap-6 border-b border-ink/15 pb-8 md:grid-cols-12">
+        <div className="md:col-span-8">
+          <span className="eyebrow text-muted">— 04 / The Vault</span>
+          <h1 className="display-2 mt-3 font-serif text-ink">Settings.</h1>
+          <p className="mt-3 max-w-2xl text-muted">
+            Keys live in your browser. The server also reads{' '}
+            <code className="rounded bg-cream px-1.5 py-0.5 text-xs text-ink">process.env</code>{' '}
+            as a fallback.
+          </p>
+        </div>
+      </header>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <KeyRound className="h-4 w-4" /> API keys
+      <div className="grid gap-6 lg:grid-cols-12">
+        <Card className="lg:col-span-7 enter">
+          <CardHeader className="p-7">
+            <span className="eyebrow text-muted">— A. Credentials</span>
+            <CardTitle className="mt-2 flex items-center gap-2 font-serif text-3xl">
+              <KeyRound className="h-5 w-5" /> API keys
             </CardTitle>
             <CardDescription>
               Optional — leave blank to use the server environment defaults.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 p-7 pt-0">
             <div>
               <Label>Groq API key</Label>
               <Input
-                className="mt-1.5 font-mono"
+                className="mt-1.5"
                 type="password"
                 placeholder="gsk_..."
                 value={form.groqApiKey}
@@ -103,7 +108,7 @@ export default function SettingsPage() {
             <div>
               <Label>xAI (Grok) API key</Label>
               <Input
-                className="mt-1.5 font-mono"
+                className="mt-1.5"
                 type="password"
                 placeholder="xai-..."
                 value={form.grokApiKey}
@@ -113,18 +118,18 @@ export default function SettingsPage() {
             <div>
               <Label>GitHub token</Label>
               <Input
-                className="mt-1.5 font-mono"
+                className="mt-1.5"
                 type="password"
                 placeholder="ghp_..."
                 value={form.githubToken}
                 onChange={(e) => setForm({ ...form, githubToken: e.target.value })}
               />
-              <p className="mt-1 text-xs text-muted-foreground">
-                Needs <code>repo</code> scope. Never sent to the browser.
+              <p className="mt-1 text-[11px] uppercase tracking-eyebrow text-muted">
+                Needs <code>repo</code> scope · never sent to the browser
               </p>
             </div>
             <Separator />
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Default judge model</Label>
                 <div className="mt-1.5">
@@ -137,7 +142,7 @@ export default function SettingsPage() {
               <div>
                 <Label>GitHub Pages branch</Label>
                 <Input
-                  className="mt-1.5 font-mono"
+                  className="mt-1.5"
                   value={form.githubPagesBranch}
                   onChange={(e) => setForm({ ...form, githubPagesBranch: e.target.value })}
                 />
@@ -145,10 +150,10 @@ export default function SettingsPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 pt-2">
-              <Button onClick={handleSave}>
+              <Button variant="pill" onClick={handleSave}>
                 <Save className="h-4 w-4" /> Save
               </Button>
-              <Button variant="outline" onClick={handleTest} disabled={testing}>
+              <Button variant="violet" onClick={handleTest} disabled={testing}>
                 {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
                 Test connections
               </Button>
@@ -156,17 +161,18 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Connection test</CardTitle>
+        <Card className="lg:col-span-5 enter-2">
+          <CardHeader className="p-7">
+            <span className="eyebrow text-muted">— B. Diagnostics</span>
+            <CardTitle className="mt-2 font-serif text-3xl">Connection test</CardTitle>
             <CardDescription>
               Pings GitHub, Groq, and xAI with the configured keys.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-3 p-7 pt-0">
             {!results ? (
-              <p className="text-sm text-muted-foreground">
-                Click <span className="text-foreground">Test connections</span> to see results.
+              <p className="text-sm text-muted">
+                Click <span className="text-ink">Test connections</span> to see results.
               </p>
             ) : (
               <div className="space-y-2">
@@ -175,13 +181,12 @@ export default function SettingsPage() {
                 <ResultRow name="xAI Grok" result={results.grok} />
               </div>
             )}
-            <div className="rounded-lg border border-border/60 bg-background/40 p-3 text-xs text-muted-foreground">
-              <p className="mb-1 font-medium text-foreground">Security note</p>
-              <p>
-                This UI stores keys in <code>localStorage</code> so each user can have
-                their own. The server still validates them by calling
-                <code> /api/test</code>, so keys never appear in network responses
-                to the browser.
+            <div className="rounded-2xl border border-ink/15 bg-cream/60 p-4 text-xs leading-relaxed text-ink/80">
+              <p className="font-serif text-base tracking-tightest text-ink">Security note</p>
+              <p className="mt-1">
+                Keys live in <code>localStorage</code> so each user can have their own.
+                The server still validates them via <code>/api/test</code>, so keys never
+                appear in network responses to the browser.
               </p>
               <p className="mt-2">
                 For production, prefer the server-side{' '}
@@ -189,8 +194,8 @@ export default function SettingsPage() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="success">Server: keys hidden from browser</Badge>
-              <Badge variant="info">Next.js App Router</Badge>
+              <Badge variant="lime">Server-side</Badge>
+              <Badge variant="outline">No leaks</Badge>
             </div>
           </CardContent>
         </Card>
@@ -202,22 +207,22 @@ export default function SettingsPage() {
 function ResultRow({ name, result }: { name: string; result?: { ok: boolean; detail?: string } }) {
   if (!result) {
     return (
-      <div className="flex items-center justify-between rounded-md border border-border/60 bg-background/30 p-3 text-sm">
+      <div className="flex items-center justify-between rounded-pill border border-ink/15 bg-paper/60 px-4 py-2.5 text-sm">
         <span className="font-medium">{name}</span>
-        <span className="text-xs text-muted-foreground">Not tested</span>
+        <span className="text-[10px] uppercase tracking-eyebrow text-muted">Not tested</span>
       </div>
     );
   }
   return (
-    <div className="flex items-center justify-between rounded-md border border-border/60 bg-background/30 p-3 text-sm">
+    <div className="flex items-center justify-between gap-3 rounded-pill border border-ink/15 bg-paper/60 px-4 py-2.5 text-sm">
       <span className="font-medium">{name}</span>
       <div className="flex items-center gap-2">
         {result.ok ? (
-          <Badge variant="success">OK</Badge>
+          <Badge variant="lime">OK</Badge>
         ) : (
-          <Badge variant="destructive">Failed</Badge>
+          <Badge variant="red">Failed</Badge>
         )}
-        <span className="text-xs text-muted-foreground">{result.detail}</span>
+        <span className="text-[10px] uppercase tracking-eyebrow text-muted">{result.detail}</span>
       </div>
     </div>
   );

@@ -4,27 +4,45 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  [
+    'group relative inline-flex items-center justify-center gap-2 whitespace-nowrap',
+    'rounded-pill font-sans text-sm font-medium tracking-tight',
+    'transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
+    'disabled:pointer-events-none disabled:opacity-50',
+    'active:scale-[0.98]',
+  ].join(' '),
   {
     variants: {
       variant: {
+        // Solid ink CTA — sits on cream/paper
         default:
-          'bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_0_1px_hsl(262_83%_50%/0.4),0_8px_24px_-8px_hsl(262_83%_50%/0.6)]',
-        destructive:
-          'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+          'bg-ink text-paper border border-ink hover:bg-ink-2',
+        // Hairline outline
         outline:
-          'border border-input bg-transparent hover:bg-secondary hover:text-secondary-foreground',
+          'border border-ink bg-transparent text-ink hover:bg-ink hover:text-paper',
+        // Cream secondary
         secondary:
-          'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        ghost: 'hover:bg-secondary hover:text-secondary-foreground',
-        link: 'text-primary underline-offset-4 hover:underline',
-        glow:
-          'relative bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 text-white shadow-[0_0_30px_-5px_hsl(262_83%_60%/0.6)] hover:brightness-110',
+          'bg-cream text-ink border border-ink hover:bg-ink hover:text-paper',
+        // Bold red structural CTA
+        red:
+          'bg-brand-red text-paper border border-brand-red hover:brightness-95',
+        blue:
+          'bg-brand-blue text-paper border border-brand-blue hover:brightness-95',
+        violet:
+          'bg-brand-violet text-paper border border-brand-violet hover:brightness-95',
+        lime:
+          'bg-brand-lime text-ink border border-brand-lime hover:brightness-95',
+        ghost: 'text-ink hover:bg-ink/5',
+        link: 'text-ink underline underline-offset-4 hover:no-underline',
+        // Pill with inner trailing icon
+        pill: 'bg-ink text-paper border border-ink pr-1.5',
       },
       size: {
-        default: 'h-10 px-4 py-2',
-        sm: 'h-9 rounded-md px-3',
-        lg: 'h-11 rounded-md px-8 text-base',
+        sm: 'h-9 px-3.5 text-xs',
+        default: 'h-11 px-5',
+        lg: 'h-12 px-6 text-base',
+        xl: 'h-14 px-7 text-base',
         icon: 'h-10 w-10',
       },
     },
@@ -39,14 +57,31 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, children, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button';
+    const isPill = variant === 'pill';
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         {...props}
-      />
+      >
+        {isPill ? (
+          <>
+            <span className="pl-4">{children}</span>
+            <span
+              aria-hidden
+              className="ml-1 grid h-8 w-8 place-items-center rounded-full bg-paper text-ink transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+                <path d="M2 10L10 2M10 2H4M10 2V8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          </>
+        ) : (
+          children
+        )}
+      </Comp>
     );
   },
 );

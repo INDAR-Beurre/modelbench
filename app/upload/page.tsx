@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Sparkles, Wand2 } from 'lucide-react';
+import { Loader2, Sparkles, Wand2, ArrowUpRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -79,7 +79,6 @@ export default function UploadPage() {
       judgeModelId: settings?.defaultJudgeModelId ?? DEFAULT_MODEL_ID,
     });
 
-    // Auto-judge
     try {
       const judgeRes = await fetch('/api/judge', {
         method: 'POST',
@@ -109,24 +108,32 @@ export default function UploadPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Upload a project</h1>
-        <p className="mt-1 text-muted-foreground">
-          Drop files or use a model to generate them, then add the project to your bench.
-        </p>
-      </div>
+    <div className="space-y-12">
+      <header className="grid gap-6 border-b border-ink/15 pb-8 md:grid-cols-12">
+        <div className="md:col-span-8">
+          <span className="eyebrow text-muted">— 02 / The Desk</span>
+          <h1 className="display-2 mt-3 font-serif text-ink">Submit a project.</h1>
+          <p className="mt-3 max-w-2xl text-muted">
+            Drop files, or have a model generate them, then add the project to your bench.
+            The judge will score it on three axes and slot it into the leaderboard.
+          </p>
+        </div>
+        <div className="flex items-end justify-end md:col-span-4">
+          <Badge variant="red" className="text-xs">Beta</Badge>
+        </div>
+      </header>
 
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Source files</CardTitle>
+      <div className="grid gap-6 lg:grid-cols-12">
+        <Card className="lg:col-span-7 enter">
+          <CardHeader className="p-7">
+            <span className="eyebrow text-muted">— A. Source files</span>
+            <CardTitle className="mt-2 font-serif text-3xl">The code</CardTitle>
             <CardDescription>
-              Drop a folder, pick files, or click <span className="text-foreground">Generate with AI</span>.
+              Drop a folder, pick files, or click <span className="text-ink">Generate with AI</span>.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
+          <CardContent className="space-y-5 p-7 pt-0">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Model that generated the code</Label>
                 <div className="mt-1.5">
@@ -154,10 +161,11 @@ export default function UploadPage() {
               />
             </div>
             <FileUpload files={files} onChange={setFiles} />
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-4">
               <Button
                 type="button"
-                variant="outline"
+                variant="violet"
+                size="lg"
                 onClick={handleGenerate}
                 disabled={generating || !prompt.trim()}
               >
@@ -171,14 +179,15 @@ export default function UploadPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Project metadata</CardTitle>
+        <Card className="lg:col-span-5 enter-2" accent="red">
+          <CardHeader className="p-7">
+            <span className="eyebrow text-muted">— B. Metadata</span>
+            <CardTitle className="mt-2 font-serif text-3xl">The label</CardTitle>
             <CardDescription>
-              Give it a short, memorable name. You'll be able to edit it later.
+              Short and memorable. You can edit anything later.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 p-7 pt-0">
             <div>
               <Label>Name</Label>
               <Input
@@ -188,23 +197,23 @@ export default function UploadPage() {
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
-            <div className="rounded-lg border border-border/60 bg-background/40 p-3 text-xs text-muted-foreground">
-              <p className="font-medium text-foreground">What happens on submit?</p>
-              <ul className="mt-2 list-disc space-y-1 pl-4">
+            <div className="rounded-2xl border border-ink/15 bg-cream/60 p-4 text-xs leading-relaxed text-ink/80">
+              <p className="font-serif text-base tracking-tightest text-ink">What happens next?</p>
+              <ul className="mt-2 list-decimal space-y-1 pl-4">
                 <li>The project is saved to your local bench.</li>
-                <li>The judging model scores it on 3 axes (1-10 each).</li>
-                <li>You can then push it to GitHub or re-judge it.</li>
+                <li>The judge scores it on three axes (1-10 each).</li>
+                <li>Push to GitHub or re-judge from the dashboard.</li>
               </ul>
             </div>
             <Button
-              variant="glow"
-              size="lg"
+              variant="pill"
+              size="xl"
               className="w-full"
               onClick={handleSubmit}
               disabled={submitting}
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              Save & judge
+              Save &amp; judge
             </Button>
           </CardContent>
         </Card>

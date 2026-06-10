@@ -22,7 +22,6 @@ export function FileUpload({ files, onChange }: Props) {
       if (!rawList || rawList.length === 0) return;
       setError(null);
 
-      // Use the relativePath property to preserve folder structure (Chromium).
       const items = Array.from(rawList);
       const next: ProjectFile[] = [];
       for (const f of items) {
@@ -62,9 +61,9 @@ export function FileUpload({ files, onChange }: Props) {
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
         className={cn(
-          'group relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-card/40 p-6 text-center transition-colors',
-          'hover:border-primary/50 hover:bg-card/70',
-          dragOver && 'border-primary bg-primary/10',
+          'group relative flex min-h-[240px] cursor-pointer flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed border-ink/30 bg-paper/60 p-8 text-center transition-all duration-500',
+          'hover:border-ink hover:bg-paper',
+          dragOver && 'border-ink bg-brand-lime/30',
         )}
       >
         <input
@@ -77,55 +76,61 @@ export function FileUpload({ files, onChange }: Props) {
           className="absolute inset-0 cursor-pointer opacity-0"
           onChange={(e) => handleFiles(e.target.files)}
         />
-        <UploadCloud className="mb-3 h-8 w-8 text-muted-foreground transition-transform group-hover:-translate-y-1" />
-        <p className="text-sm font-medium">
-          Drop files or a folder here, or <span className="text-primary">click to browse</span>
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          HTML, CSS, JS/TS, JSON, MD, SVG. Folder upload supported.
-        </p>
+        <div className="grid h-14 w-14 place-items-center rounded-full border border-ink bg-paper text-ink transition-transform duration-500 group-hover:-translate-y-1">
+          <UploadCloud className="h-6 w-6" strokeWidth={1.5} />
+        </div>
+        <div>
+          <p className="font-serif text-xl tracking-tightest text-ink">
+            Drop files, drop a folder.
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            Or <span className="sweep text-ink">click to browse</span> · HTML, CSS, JS/TS, JSON, MD, SVG
+          </p>
+        </div>
       </label>
 
       {error && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+        <div className="rounded-pill border border-brand-red bg-brand-red/10 px-4 py-2 text-xs text-brand-red">
           {error}
         </div>
       )}
 
       {files.length > 0 && (
-        <div className="rounded-lg border border-border bg-card/40">
-          <div className="flex items-center justify-between border-b border-border/60 p-3 text-xs text-muted-foreground">
-            <span>{files.length} file{files.length === 1 ? '' : 's'} ready</span>
+        <div className="overflow-hidden rounded-2xl border border-ink/20 bg-paper/80">
+          <div className="flex items-center justify-between border-b border-ink/10 px-4 py-2.5">
+            <span className="eyebrow text-muted">
+              {files.length} file{files.length === 1 ? '' : 's'} ready
+            </span>
             <Button
               type="button"
               size="sm"
               variant="ghost"
               onClick={() => onChange([])}
             >
-              Clear all
+              Clear
             </Button>
           </div>
-          <ul className="max-h-64 divide-y divide-border/60 overflow-y-auto">
+          <ul className="max-h-64 divide-y divide-ink/10 overflow-y-auto code-scroll">
             {files.map((f, i) => (
               <li
                 key={`${f.path}-${i}`}
-                className="flex items-center justify-between gap-2 px-3 py-2 text-sm"
+                className="flex items-center justify-between gap-3 px-4 py-2 text-sm"
               >
                 <div className="flex min-w-0 items-center gap-2">
-                  <FileCode className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="truncate font-mono text-xs">{f.path}</span>
-                  <span className="shrink-0 text-[10px] uppercase text-muted-foreground">
+                  <FileCode className="h-4 w-4 shrink-0 text-muted" strokeWidth={1.5} />
+                  <span className="truncate font-mono text-xs text-ink">{f.path}</span>
+                  <span className="shrink-0 text-[10px] uppercase tracking-eyebrow text-muted">
                     {f.language}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-[10px] text-muted">
                     {f.content.length.toLocaleString()} chars
                   </span>
                   <button
                     type="button"
                     onClick={() => onChange(files.filter((_, idx) => idx !== i))}
-                    className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    className="rounded-full p-1 text-muted hover:bg-ink/10 hover:text-ink"
                     aria-label={`Remove ${f.path}`}
                   >
                     <X className="h-3 w-3" />

@@ -25,7 +25,7 @@ export function ModelSelect({ value, onValueChange, placeholder = 'Select a mode
         {MODEL_CATALOG.map((m) => (
           <SelectItem key={m.id} value={m.id}>
             <span className="font-medium">{m.label}</span>
-            <span className="ml-2 text-xs uppercase tracking-wider text-muted-foreground">
+            <span className="ml-2 text-[10px] uppercase tracking-eyebrow text-muted">
               {m.provider}
             </span>
           </SelectItem>
