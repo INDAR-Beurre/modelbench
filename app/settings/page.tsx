@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { KeyRound, Loader2, Save, ShieldCheck } from 'lucide-react';
+import { Loader2, Save, ShieldCheck, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +17,6 @@ import type { AppSettings } from '@/lib/types';
 interface PingResults {
   github?: { ok: boolean; detail?: string };
   groq?: { ok: boolean; detail?: string };
-  grok?: { ok: boolean; detail?: string };
 }
 
 export default function SettingsPage() {
@@ -25,10 +24,23 @@ export default function SettingsPage() {
   const [form, setForm] = useState<AppSettings | null>(null);
   const [testing, setTesting] = useState(false);
   const [results, setResults] = useState<PingResults | null>(null);
+  const [envStatus, setEnvStatus] = useState<{ groq: boolean; github: boolean } | null>(null);
 
   useEffect(() => {
     if (settings && !form) setForm(settings);
   }, [settings, form]);
+
+  useEffect(() => {
+    fetch('/api/test', { method: 'POST' })
+      .then((r) => r.json())
+      .then((data) => {
+        setEnvStatus({
+          groq: Boolean(data?.results?.groq?.ok),
+          github: Boolean(data?.results?.github?.ok),
+        });
+      })
+      .catch(() => setEnvStatus({ groq: false, github: false }));
+  }, []);
 
   if (!form) {
     return (
@@ -39,21 +51,16 @@ export default function SettingsPage() {
   }
 
   async function handleTest() {
-    if (!form) return;
     setTesting(true);
     setResults(null);
     try {
-      const res = await fetch('/api/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          githubTokenOverride: form.githubToken || undefined,
-          groqApiKeyOverride: form.groqApiKey || undefined,
-          grokApiKeyOverride: form.grokApiKey || undefined,
-        }),
-      });
+      const res = await fetch('/api/test', { method: 'POST' });
       const data = await res.json();
       setResults(data.results ?? {});
+      setEnvStatus({
+        groq: Boolean(data?.results?.groq?.ok),
+        github: Boolean(data?.results?.github?.ok),
+      });
       toast.success('Connection test complete');
     } catch (err) {
       toast.error((err as Error).message);
@@ -63,10 +70,9 @@ export default function SettingsPage() {
   }
 
   function handleSave() {
-    if (!form) return;
     update(form);
     settingsStore.save(form);
-    toast.success('Settings saved locally');
+    toast.success('Settings saved');
   }
 
   return (
@@ -76,9 +82,8 @@ export default function SettingsPage() {
           <span className="eyebrow text-muted">— 04 / The Vault</span>
           <h1 className="display-2 mt-3 font-serif text-ink">Settings.</h1>
           <p className="mt-3 max-w-2xl text-muted">
-            Keys live in your browser. The server also reads{' '}
-            <code className="rounded bg-cream px-1.5 py-0.5 text-xs text-ink">process.env</code>{' '}
-            as a fallback.
+            All API keys are managed on the server via environment variables.
+            Nothing sensitive ever touches the browser.
           </p>
         </div>
       </header>
@@ -86,49 +91,30 @@ export default function SettingsPage() {
       <div className="grid gap-6 lg:grid-cols-12">
         <Card className="lg:col-span-7 enter">
           <CardHeader className="p-7">
-            <span className="eyebrow text-muted">— A. Credentials</span>
+            <span className="eyebrow text-muted">— A. Server keys</span>
             <CardTitle className="mt-2 flex items-center gap-2 font-serif text-3xl">
-              <KeyRound className="h-5 w-5" /> API keys
+              <ShieldCheck className="h-5 w-5" /> Configured credentials
             </CardTitle>
             <CardDescription>
-              Optional — leave blank to use the server environment defaults.
+              Read directly from the hosting provider's environment. No inputs here.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 p-7 pt-0">
-            <div>
-              <Label>Groq API key</Label>
-              <Input
-                className="mt-1.5"
-                type="password"
-                placeholder="gsk_..."
-                value={form.groqApiKey}
-                onChange={(e) => setForm({ ...form, groqApiKey: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>xAI (Grok) API key</Label>
-              <Input
-                className="mt-1.5"
-                type="password"
-                placeholder="xai-..."
-                value={form.grokApiKey}
-                onChange={(e) => setForm({ ...form, grokApiKey: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>GitHub token</Label>
-              <Input
-                className="mt-1.5"
-                type="password"
-                placeholder="ghp_..."
-                value={form.githubToken}
-                onChange={(e) => setForm({ ...form, githubToken: e.target.value })}
-              />
-              <p className="mt-1 text-[11px] uppercase tracking-eyebrow text-muted">
-                Needs <code>repo</code> scope · never sent to the browser
-              </p>
-            </div>
+            <EnvRow
+              name="GROQ_API_KEY"
+              provider="Groq"
+              ok={envStatus?.groq}
+              docsHint="Used by the judge and the in-app generator."
+            />
+            <EnvRow
+              name="GITHUB_TOKEN"
+              provider="GitHub"
+              ok={envStatus?.github}
+              docsHint="Used to push projects to repos and enable Pages."
+            />
+
             <Separator />
+
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Default judge model</Label>
@@ -166,7 +152,7 @@ export default function SettingsPage() {
             <span className="eyebrow text-muted">— B. Diagnostics</span>
             <CardTitle className="mt-2 font-serif text-3xl">Connection test</CardTitle>
             <CardDescription>
-              Pings GitHub, Groq, and xAI with the configured keys.
+              Pings GitHub and Groq with the configured server keys.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 p-7 pt-0">
@@ -178,28 +164,60 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <ResultRow name="GitHub" result={results.github} />
                 <ResultRow name="Groq" result={results.groq} />
-                <ResultRow name="xAI Grok" result={results.grok} />
               </div>
             )}
             <div className="rounded-2xl border border-ink/15 bg-cream/60 p-4 text-xs leading-relaxed text-ink/80">
-              <p className="font-serif text-base tracking-tightest text-ink">Security note</p>
+              <p className="font-serif text-base tracking-tightest text-ink">Need to change a key?</p>
               <p className="mt-1">
-                Keys live in <code>localStorage</code> so each user can have their own.
-                The server still validates them via <code>/api/test</code>, so keys never
-                appear in network responses to the browser.
+                Open the Netlify dashboard, edit the env vars, and trigger a redeploy.
+                Keys are never stored in the browser, the repo, or any response payload.
               </p>
-              <p className="mt-2">
-                For production, prefer the server-side{' '}
-                <code>process.env</code> approach and remove the localStorage fallback.
-              </p>
+              <a
+                href="https://app.netlify.com/sites/modelbench-003cbaa2/configuration/env"
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1 font-medium text-ink underline underline-offset-4"
+              >
+                Open Netlify env vars <ExternalLink className="h-3 w-3" />
+              </a>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="lime">Server-side</Badge>
-              <Badge variant="outline">No leaks</Badge>
+              <Badge variant="lime">Server-side only</Badge>
+              <Badge variant="outline">No browser leaks</Badge>
             </div>
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+function EnvRow({
+  name,
+  provider,
+  ok,
+  docsHint,
+}: {
+  name: string;
+  provider: string;
+  ok?: boolean;
+  docsHint?: string;
+}) {
+  const configured = ok !== undefined;
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-ink/15 bg-paper/60 px-4 py-3">
+      <div>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs text-ink">{name}</span>
+          <span className="eyebrow text-muted">— {provider}</span>
+        </div>
+        {docsHint && <p className="mt-1 text-[11px] text-muted">{docsHint}</p>}
+      </div>
+      {configured ? (
+        ok ? <Badge variant="lime">Set</Badge> : <Badge variant="red">Missing</Badge>
+      ) : (
+        <Badge variant="outline">Checking…</Badge>
+      )}
     </div>
   );
 }
@@ -217,11 +235,7 @@ function ResultRow({ name, result }: { name: string; result?: { ok: boolean; det
     <div className="flex items-center justify-between gap-3 rounded-pill border border-ink/15 bg-paper/60 px-4 py-2.5 text-sm">
       <span className="font-medium">{name}</span>
       <div className="flex items-center gap-2">
-        {result.ok ? (
-          <Badge variant="lime">OK</Badge>
-        ) : (
-          <Badge variant="red">Failed</Badge>
-        )}
+        {result.ok ? <Badge variant="lime">OK</Badge> : <Badge variant="red">Failed</Badge>}
         <span className="text-[10px] uppercase tracking-eyebrow text-muted">{result.detail}</span>
       </div>
     </div>

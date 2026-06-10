@@ -1,17 +1,16 @@
 // lib/llm.ts
 // =========================================================================
-// OpenAI-compatible LLM client wrapper for Groq and xAI Grok.
+// OpenAI-compatible LLM client wrapper for Groq.
 //
-// Both Groq (https://console.groq.com) and xAI (https://console.x.ai) expose
-// OpenAI-compatible REST APIs. We use the official `openai` SDK and just
-// point the base URL at whichever provider we want to talk to.
+// Groq (https://console.groq.com) exposes an OpenAI-compatible REST API.
+// We use the official `openai` SDK and point the base URL at it.
 //
 // ⚠️ This module is SERVER-ONLY. It reads API keys from process.env and
 // must never be imported by a client component.
 // =========================================================================
 
 import OpenAI from 'openai';
-import type { LLMProvider, ModelSpec } from './types';
+import type { ModelSpec } from './types';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -30,32 +29,21 @@ export interface CompletionResult {
   usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number };
 }
 
-/** Resolve the API key for a provider. Throws a clear error if missing. */
-export function getApiKey(provider: LLMProvider): string {
-  const env =
-    provider === 'groq' ? process.env.GROQ_API_KEY : process.env.GROK_API_KEY;
+/** Resolve the Groq API key. Throws a clear error if missing. */
+export function getApiKey(): string {
+  const env = process.env.GROQ_API_KEY;
   if (!env || env.trim().length === 0) {
     throw new Error(
-      `Missing API key for ${provider}. Set ${
-        provider === 'groq' ? 'GROQ_API_KEY' : 'GROK_API_KEY'
-      } in your server environment.`,
+      'Missing GROQ_API_KEY in the server environment. Set it via your hosting provider (e.g. Netlify env vars).',
     );
   }
   return env;
 }
 
-/** Create an OpenAI-compatible client for the given provider. */
-export function getClient(
-  provider: LLMProvider,
-  baseUrlOverride?: string,
-  apiKeyOverride?: string,
-): OpenAI {
-  const apiKey = apiKeyOverride ?? getApiKey(provider);
-  const baseURL =
-    baseUrlOverride ??
-    (provider === 'groq'
-      ? 'https://api.groq.com/openai/v1'
-      : 'https://api.x.ai/v1');
+/** Create an OpenAI-compatible client pointed at Groq. */
+export function getClient(model: ModelSpec): OpenAI {
+  const apiKey = getApiKey();
+  const baseURL = model.baseUrl ?? 'https://api.groq.com/openai/v1';
   return new OpenAI({ apiKey, baseURL });
 }
 
@@ -67,9 +55,8 @@ export async function chatCompletion(
   model: ModelSpec,
   messages: ChatMessage[],
   opts: CompletionOptions = {},
-  apiKeyOverride?: string,
 ): Promise<CompletionResult> {
-  const client = getClient(model.provider, model.baseUrl, apiKeyOverride);
+  const client = getClient(model);
   const response = await client.chat.completions.create({
     model: model.id,
     messages: messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],

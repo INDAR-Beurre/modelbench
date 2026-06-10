@@ -2,11 +2,8 @@
 // =========================================================================
 // POST /api/test
 //
-// Lightweight "do my API keys work?" check. Returns a small JSON describing
-// which providers are configured and whether the keys are valid.
-//
-// Request body (optional):
-//   { githubTokenOverride?: string, groqApiKeyOverride?: string, grokApiKeyOverride?: string }
+// Lightweight "do my server-side API keys work?" check. Returns a small
+// JSON describing which providers are configured and whether they respond.
 // =========================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -15,29 +12,13 @@ import OpenAI from 'openai';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-interface TestRequestBody {
-  githubTokenOverride?: string;
-  groqApiKeyOverride?: string;
-  grokApiKeyOverride?: string;
-}
-
-export async function POST(req: NextRequest) {
-  let body: TestRequestBody = {};
-  try {
-    body = (await req.json()) as TestRequestBody;
-  } catch {
-    // empty body is fine
-  }
-
-  const githubToken = body.githubTokenOverride?.trim() || process.env.GITHUB_TOKEN;
-  const groqKey = body.groqApiKeyOverride?.trim() || process.env.GROQ_API_KEY;
-  const grokKey = body.grokApiKeyOverride?.trim() || process.env.GROK_API_KEY;
-
+export async function POST(_req: NextRequest) {
   const results: Record<string, { ok: boolean; detail?: string }> = {};
 
   // --- GitHub ---
+  const githubToken = process.env.GITHUB_TOKEN;
   if (!githubToken) {
-    results.github = { ok: false, detail: 'Token missing' };
+    results.github = { ok: false, detail: 'Token missing on server' };
   } else {
     try {
       const res = await fetch('https://api.github.com/user', {
@@ -59,39 +40,19 @@ export async function POST(req: NextRequest) {
   }
 
   // --- Groq ---
+  const groqKey = process.env.GROQ_API_KEY;
   if (!groqKey) {
-    results.groq = { ok: false, detail: 'Key missing' };
+    results.groq = { ok: false, detail: 'Key missing on server' };
   } else {
-    results.groq = await pingOpenAICompatible('groq', groqKey);
-  }
-
-  // --- Grok ---
-  if (!grokKey) {
-    results.grok = { ok: false, detail: 'Key missing' };
-  } else {
-    results.grok = await pingOpenAICompatible('grok', grokKey);
+    try {
+      const client = new OpenAI({ apiKey: groqKey, baseURL: 'https://api.groq.com/openai/v1' });
+      await client.models.list();
+      results.groq = { ok: true, detail: 'Groq reachable' };
+    } catch (err) {
+      const e = err as { status?: number; message?: string };
+      results.groq = { ok: false, detail: e.message ?? 'Groq request failed' };
+    }
   }
 
   return NextResponse.json({ results });
-}
-
-async function pingOpenAICompatible(
-  provider: 'groq' | 'grok',
-  apiKey: string,
-): Promise<{ ok: boolean; detail?: string }> {
-  const baseURL =
-    provider === 'groq'
-      ? 'https://api.groq.com/openai/v1'
-      : 'https://api.x.ai/v1';
-  try {
-    const client = new OpenAI({ apiKey, baseURL });
-    await client.models.list();
-    return { ok: true, detail: `${provider} reachable` };
-  } catch (err) {
-    const e = err as { status?: number; message?: string };
-    return {
-      ok: false,
-      detail: e.message ?? `${provider} request failed`,
-    };
-  }
 }

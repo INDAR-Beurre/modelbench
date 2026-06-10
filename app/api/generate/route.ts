@@ -6,14 +6,11 @@
 // language prompt, asks the configured model to produce a complete
 // self-contained web project, and returns the parsed files back to the
 // client. The client then feeds those files into the upload/judge pipeline.
-//
-// This is intentionally separate from /api/judge so the judging engine
-// stays a pure read-only evaluator.
 // =========================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { chatCompletion } from '@/lib/llm';
-import { findModel, type LLMProvider, type ProjectFile } from '@/lib/types';
+import { findModel, type ProjectFile } from '@/lib/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,7 +18,6 @@ export const dynamic = 'force-dynamic';
 interface GenerateRequestBody {
   prompt: string;
   modelId: string;
-  apiKeyOverride?: Partial<Record<LLMProvider, string>>;
 }
 
 const SYSTEM_PROMPT = `You are an expert frontend engineer. Generate a complete, self-contained web project for the user's prompt.
@@ -57,6 +53,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  if (!process.env.GROQ_API_KEY) {
+    return NextResponse.json(
+      { error: 'GROQ_API_KEY is not configured on the server.' },
+      { status: 500 },
+    );
+  }
+
   const model = findModel(body.modelId);
   if (!model) {
     return NextResponse.json(
@@ -64,8 +67,6 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
-
-  const apiKeyOverride = body.apiKeyOverride?.[model.provider];
 
   try {
     const result = await chatCompletion(
@@ -75,7 +76,6 @@ export async function POST(req: NextRequest) {
         { role: 'user', content: body.prompt },
       ],
       { temperature: 0.7, maxTokens: 4096, jsonMode: true },
-      apiKeyOverride,
     );
 
     const parsed = safeParseFiles(result.content);

@@ -1,4 +1,9 @@
-'use client';
+// hooks/useProjects.ts
+// =========================================================================
+// Projects store + thin wrappers around the /api/judge and /api/deploy
+// routes. API keys live exclusively on the server, so we never accept or
+// forward per-request credentials from the client.
+// =========================================================================
 
 import { useCallback, useEffect, useState } from 'react';
 import { projectsStore, settingsStore } from '@/lib/store';
@@ -63,40 +68,26 @@ export function useSettings() {
   return { settings, update };
 }
 
-/**
- * Run the judging engine for a project. Calls POST /api/judge and
- * updates project state with the result.
- */
+/** Run the judging engine for a project. */
 export async function runJudge(
   project: Project,
   judgeModelId: string,
-  apiKeyOverrides: { groq?: string; grok?: string } = {},
 ): Promise<Project> {
   const res = await fetch('/api/judge', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ project, judgeModelId, apiKeyOverride: apiKeyOverrides }),
+    body: JSON.stringify({ project, judgeModelId }),
   });
   const data = await res.json();
   if (!res.ok) {
-    return {
-      ...project,
-      status: 'error',
-      error: data.error ?? 'Judge failed',
-    };
+    return { ...project, status: 'error', error: data.error ?? 'Judge failed' };
   }
-  return {
-    ...project,
-    status: 'judged',
-    judge: data,
-    judgeModelId,
-  };
+  return { ...project, status: 'judged', judge: data, judgeModelId };
 }
 
-/** Run the GitHub deploy for a project. Calls POST /api/deploy. */
+/** Run the GitHub deploy for a project. */
 export async function runDeploy(
   project: Project,
-  githubTokenOverride?: string,
   pagesBranch?: string,
 ): Promise<Project> {
   const res = await fetch('/api/deploy', {
@@ -106,7 +97,6 @@ export async function runDeploy(
       name: project.name,
       description: project.prompt.slice(0, 140),
       files: project.files,
-      githubTokenOverride,
       pagesBranch,
     }),
   });
@@ -114,9 +104,5 @@ export async function runDeploy(
   if (!res.ok) {
     return { ...project, error: data.error ?? 'Deploy failed' };
   }
-  return {
-    ...project,
-    repoUrl: data.repoUrl,
-    deployUrl: data.pagesUrl,
-  };
+  return { ...project, repoUrl: data.repoUrl, deployUrl: data.pagesUrl };
 }

@@ -66,9 +66,6 @@ export default function DashboardPage() {
                 onUpdate={(next) => updateProject(p.id, next)}
                 onDelete={() => removeProject(p.id)}
                 defaultJudgeModelId={settings?.defaultJudgeModelId ?? 'llama-3.3-70b-versatile'}
-                groqApiKey={settings?.groqApiKey ?? ''}
-                grokApiKey={settings?.grokApiKey ?? ''}
-                githubToken={settings?.githubToken ?? ''}
               />
             ))}
           </div>

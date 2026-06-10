@@ -1,8 +1,8 @@
 // lib/store.ts
 // =========================================================================
-// Browser-side persistence helpers. We keep the data in localStorage so the
-// app works without any backend database. Keys are namespaced under
-// "modelbench:" to avoid collisions.
+// Browser-side persistence helpers. We keep project data in localStorage so
+// the app works without any backend database. API keys are NOT stored here —
+// they live exclusively on the server in environment variables.
 // =========================================================================
 
 import type { AppSettings, Project } from './types';
@@ -63,9 +63,6 @@ export const settingsStore = {
   load(): AppSettings {
     return (
       safeGet<AppSettings>(KEYS.settings) ?? {
-        githubToken: '',
-        groqApiKey: '',
-        grokApiKey: '',
         defaultJudgeModelId: 'llama-3.3-70b-versatile',
         githubPagesBranch: 'gh-pages',
       }

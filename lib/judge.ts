@@ -16,18 +16,8 @@
 import type { ChatMessage, CompletionResult } from './llm';
 import { chatCompletion } from './llm';
 import type { JudgeResult, JudgeScores, ModelSpec, Project } from './types';
-import { clamp, safeJson, truncate } from './utils';
-import { findModel } from './types';
+import { clamp, findModel, safeJson, truncate } from './utils';
 
-/**
- * The strict system prompt given to the judging LLM.
- *
- * Tips for modification:
- *  - Add a new criterion: add a `criterionName: number` field to the schema
- *    in the prompt and mirror it in JudgeScores.
- *  - Change the persona: rewrite the opening paragraph.
- *  - Change the score range: update the clamp() in parseJudgeResponse.
- */
 export const JUDGE_SYSTEM_PROMPT = `You are a Senior Frontend QA Engineer with 15+ years of experience evaluating production web interfaces. You are precise, fair, and NEVER inflate scores.
 
 Your job: review a generated web project (the source code is provided) against the original user prompt and return a strict, structured JSON evaluation.
@@ -54,13 +44,11 @@ OUTPUT FORMAT (return ONLY this JSON object, no markdown, no commentary):
   "highlights": ["<short bullet>", "<short bullet>", "<short bullet>"]
 }`;
 
-/** Build the user message that bundles the prompt and code. */
 export function buildJudgeUserMessage(project: Project): string {
   const fileList = project.files
     .map((f) => `- ${f.path} (${f.language ?? 'text'}, ${f.content.length} chars)`)
     .join('\n');
 
-  // Concatenate all files with delimiters. Truncate to keep tokens sane.
   const bundled = project.files
     .map((f) => `\n----- FILE: ${f.path} -----\n${truncate(f.content, 4000)}`)
     .join('\n');
@@ -81,18 +69,10 @@ ${bundled}
 Now evaluate strictly. Return ONLY the JSON object described in your instructions.`;
 }
 
-/**
- * Best-effort JSON extractor in case the model wraps its answer in fences.
- * Handles ```json ... ``` blocks, leading prose, and trailing commentary.
- */
 function extractJsonObject(raw: string): string {
   let s = raw.trim();
-
-  // Strip ```json ... ``` fences
   const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence) s = fence[1].trim();
-
-  // Find the first { and the last } — handle the model adding extra text.
   const first = s.indexOf('{');
   const last = s.lastIndexOf('}');
   if (first !== -1 && last !== -1 && last > first) {
@@ -101,11 +81,7 @@ function extractJsonObject(raw: string): string {
   return s;
 }
 
-/** Parse and validate the LLM's JSON response into a JudgeResult. */
-export function parseJudgeResponse(
-  raw: string,
-  judgeModel: ModelSpec,
-): JudgeResult {
+export function parseJudgeResponse(raw: string, judgeModel: ModelSpec): JudgeResult {
   const cleaned = extractJsonObject(raw);
   const parsed = safeJson<Partial<JudgeScores> & {
     critique?: string;
@@ -138,13 +114,12 @@ export function parseJudgeResponse(
 }
 
 /**
- * Run the judging engine for a project.
- * The judge model defaults to the configured default; override with `judgeModelId`.
+ * Run the judging engine for a project. The judge model defaults to the
+ * configured default; override with `judgeModelId`.
  */
 export async function judgeProject(
   project: Project,
   judgeModelId: string,
-  apiKeyOverride?: string,
 ): Promise<JudgeResult> {
   const judgeModel = findModel(judgeModelId);
   if (!judgeModel) {
@@ -158,21 +133,17 @@ export async function judgeProject(
 
   let result: CompletionResult;
   try {
-    result = await chatCompletion(
-      judgeModel,
-      messages,
-      { temperature: 0.1, maxTokens: 1024, jsonMode: true },
-      apiKeyOverride,
-    );
-  } catch (err) {
-    // Some providers/models don't support `response_format: json_object`.
-    // Retry without it and rely on the prompt + extractor.
-    result = await chatCompletion(
-      judgeModel,
-      messages,
-      { temperature: 0.1, maxTokens: 1024 },
-      apiKeyOverride,
-    );
+    result = await chatCompletion(judgeModel, messages, {
+      temperature: 0.1,
+      maxTokens: 1024,
+      jsonMode: true,
+    });
+  } catch {
+    // Fallback for models that don't support response_format=json_object.
+    result = await chatCompletion(judgeModel, messages, {
+      temperature: 0.1,
+      maxTokens: 1024,
+    });
   }
 
   return parseJudgeResponse(result.content, judgeModel);

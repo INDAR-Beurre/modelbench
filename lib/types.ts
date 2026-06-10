@@ -6,7 +6,7 @@
 // =========================================================================
 
 /** Identifier for an LLM provider we support. */
-export type LLMProvider = 'groq' | 'grok' | 'custom';
+export type LLMProvider = 'groq';
 
 /** A configured model entry. The "id" is what we send to the provider. */
 export interface ModelSpec {
@@ -58,17 +58,11 @@ export interface ProjectFile {
   language?: string; // 'html' | 'css' | 'js' | 'ts' | etc.
 }
 
-/** App settings (stored in localStorage). */
+/** App settings (stored in localStorage). Keys live on the server, not here. */
 export interface AppSettings {
-  githubToken: string;
-  groqApiKey: string;
-  grokApiKey: string;
   defaultJudgeModelId: string;
   githubPagesBranch: string;
 }
-
-/** Per-provider API key resolution. */
-export type ApiKeyResolver = (provider: LLMProvider) => string | undefined;
 
 /** Catalog of models that ship with ModelBench. */
 export const MODEL_CATALOG: ModelSpec[] = [
@@ -91,21 +85,9 @@ export const MODEL_CATALOG: ModelSpec[] = [
     baseUrl: 'https://api.groq.com/openai/v1',
   },
   {
-    id: 'grok-3-mini',
-    label: 'Grok 3 Mini (xAI)',
-    provider: 'grok',
-    baseUrl: 'https://api.x.ai/v1',
-  },
-  {
-    id: 'grok-2-1212',
-    label: 'Grok 2 (xAI)',
-    provider: 'grok',
-    baseUrl: 'https://api.x.ai/v1',
-  },
-  {
     id: 'custom',
     label: 'Custom (specify below)',
-    provider: 'custom',
+    provider: 'groq',
   },
 ];
 

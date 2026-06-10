@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Sparkles, Wand2, ArrowUpRight } from 'lucide-react';
+import { Loader2, Sparkles, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { FileUpload } from '@/components/FileUpload';
 import { ModelSelect } from '@/components/ModelSelect';
 import { useProjects, useSettings } from '@/hooks/useProjects';
-import type { ProjectFile, ModelSpec } from '@/lib/types';
+import type { ModelSpec, ProjectFile } from '@/lib/types';
 import { DEFAULT_MODEL_ID, MODEL_CATALOG, findModel } from '@/lib/types';
 
 export default function UploadPage() {
@@ -33,7 +33,7 @@ export default function UploadPage() {
     ? {
         id: 'custom',
         label: customModelName.trim() || 'Custom model',
-        provider: 'custom',
+        provider: 'groq',
       }
     : (findModel(modelId) ?? MODEL_CATALOG[0]);
 
@@ -47,14 +47,7 @@ export default function UploadPage() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt,
-          modelId,
-          apiKeyOverride: {
-            groq: settings?.groqApiKey || undefined,
-            grok: settings?.grokApiKey || undefined,
-          },
-        }),
+        body: JSON.stringify({ prompt, modelId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Generation failed');
@@ -94,10 +87,6 @@ export default function UploadPage() {
         body: JSON.stringify({
           project: { ...project, status: 'judging' },
           judgeModelId: project.judgeModelId,
-          apiKeyOverride: {
-            groq: settings?.groqApiKey || undefined,
-            grok: settings?.grokApiKey || undefined,
-          },
         }),
       });
       const data = await judgeRes.json();

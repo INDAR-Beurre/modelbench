@@ -18,18 +18,12 @@ export function ProjectCard({
   onUpdate,
   onDelete,
   defaultJudgeModelId,
-  groqApiKey,
-  grokApiKey,
-  githubToken,
 }: {
   project: Project;
   index?: number;
   onUpdate: (p: Project) => void;
   onDelete: () => void;
   defaultJudgeModelId: string;
-  groqApiKey: string;
-  grokApiKey: string;
-  githubToken: string;
 }) {
   const [busy, setBusy] = useState<'judge' | 'deploy' | null>(null);
 
@@ -41,10 +35,7 @@ export function ProjectCard({
     setBusy('judge');
     onUpdate({ ...project, status: 'judging' });
     try {
-      const updated = await runJudge(project, defaultJudgeModelId, {
-        groq: groqApiKey || undefined,
-        grok: grokApiKey || undefined,
-      });
+      const updated = await runJudge(project, defaultJudgeModelId);
       onUpdate(updated);
       if (updated.status === 'error') {
         toast.error(updated.error ?? 'Judge failed');
@@ -59,7 +50,7 @@ export function ProjectCard({
   async function handleDeploy() {
     setBusy('deploy');
     try {
-      const updated = await runDeploy(project, githubToken || undefined);
+      const updated = await runDeploy(project);
       onUpdate(updated);
       if (updated.error) toast.error(updated.error);
       else toast.success('Pushed to GitHub');
