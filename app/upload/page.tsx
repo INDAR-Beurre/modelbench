@@ -24,10 +24,18 @@ export default function UploadPage() {
   const [category, setCategory] = useState('');
   const [files, setFiles] = useState<ProjectFile[]>([]);
   const [modelId, setModelId] = useState(DEFAULT_MODEL_ID);
+  const [customModelName, setCustomModelName] = useState('');
   const [generating, setGenerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const model = findModel(modelId) ?? MODEL_CATALOG[0];
+  const isCustom = modelId === 'custom';
+  const model: ModelSpec = isCustom
+    ? {
+        id: 'custom',
+        label: customModelName.trim() || 'Custom model',
+        provider: 'custom',
+      }
+    : (findModel(modelId) ?? MODEL_CATALOG[0]);
 
   async function handleGenerate() {
     if (!prompt.trim()) {
@@ -139,6 +147,14 @@ export default function UploadPage() {
                 <div className="mt-1.5">
                   <ModelSelect value={modelId} onValueChange={setModelId} />
                 </div>
+                {isCustom && (
+                  <Input
+                    className="mt-2"
+                    placeholder="e.g. Llama 3.3 70B (Groq)"
+                    value={customModelName}
+                    onChange={(e) => setCustomModelName(e.target.value)}
+                  />
+                )}
               </div>
               <div>
                 <Label>Prompt category (optional)</Label>
@@ -167,7 +183,8 @@ export default function UploadPage() {
                 variant="violet"
                 size="lg"
                 onClick={handleGenerate}
-                disabled={generating || !prompt.trim()}
+                disabled={generating || !prompt.trim() || isCustom}
+                title={isCustom ? 'In-app generation is only available for catalog models. Upload files manually for custom entries.' : undefined}
               >
                 {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
                 Generate with {model.label.split(' ')[0]}

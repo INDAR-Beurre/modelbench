@@ -6,7 +6,7 @@
 // =========================================================================
 
 /** Identifier for an LLM provider we support. */
-export type LLMProvider = 'groq' | 'grok';
+export type LLMProvider = 'groq' | 'grok' | 'custom';
 
 /** A configured model entry. The "id" is what we send to the provider. */
 export interface ModelSpec {
@@ -101,6 +101,11 @@ export const MODEL_CATALOG: ModelSpec[] = [
     label: 'Grok 2 (xAI)',
     provider: 'grok',
     baseUrl: 'https://api.x.ai/v1',
+  },
+  {
+    id: 'custom',
+    label: 'Custom (specify below)',
+    provider: 'custom',
   },
 ];
 
