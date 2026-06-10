@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { useEffect, useState } from 'react';
-import { Loader2, Sparkles, Wand2, FlaskConical, Plus, X, Github, Check } from 'lucide-react';
+import { Loader2, Sparkles, Wand2, FlaskConical, Plus, X, Github } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { FileUpload } from '@/components/FileUpload';
 import { ModelSelect } from '@/components/ModelSelect';
 import { runDeploy, useProjects, useSettings } from '@/hooks/useProjects';
-import type { ModelSpec, ProjectFile } from '@/lib/types';
+import type { JudgeResult, ModelSpec, ProjectFile } from '@/lib/types';
 import { DEFAULT_MODEL_ID, MODEL_CATALOG, findModel } from '@/lib/types';
 
 const AUTO_PUSH_KEY = 'modelbench:autoPush';
@@ -205,7 +204,7 @@ export default function UploadPage() {
     });
 
     let judgedOk = false;
-    let judgeData: { average: number } | null = null;
+    let judgeData: JudgeResult | null = null;
     try {
       const judgeRes = await fetch('/api/judge', {
         method: 'POST',
@@ -240,7 +239,7 @@ export default function UploadPage() {
         const updated = await runDeploy({
           ...project,
           status: 'judged',
-          judge: judgeData ?? undefined,
+          ...(judgeData ? { judge: judgeData } : {}),
         });
         if (updated.error) {
           updateProject(project.id, { error: updated.error });
