@@ -154,10 +154,8 @@ export function ModelChart({ rows, className }: { rows: ChartRow[]; className?: 
                   color: '#120f0a',
                 }}
                 labelStyle={{ color: '#120f0a', fontWeight: 600 }}
-                formatter={(value: number | string, name: string) => [
-                  typeof value === 'number' ? value.toFixed(1) : value,
-                  name,
-                ]}
+                formatter={((value: number | string) =>
+                  typeof value === 'number' ? value.toFixed(1) : value) as never}
               />
               <Legend
                 wrapperStyle={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.15em' }}
